@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Stack for bootstaping a terraform backend.
+  It consists of:
+  - 1 S3 Bucket for the terraform state
+  - 1 DynamoDB Table for the terraform lock
+  - 1 IAM user for CICD
+  - 1 IAM Policy
+  File is https://github.com/rbapst-tamedia/terraform/AWS-init/aws-init.yaml
+Resources:
+  cicdIac:
+    Type: AWS::IAM::User
+    Properties:
+      Path: /technical/cicd/
+      UserName: rba-cicd
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AdministratorAccess
+  terraformStatePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt terraformState.Arn
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            Resource: !Sub ${terraformState.Arn}/*
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            Resource: !GetAtt lockState.Arn
+      PolicyName: terraformStatePolicy
+      Users:
+        - !Ref cicdIac
+  terraformState:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      BucketName: !Sub rba-tf-state-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+  lockState:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      AttributeDefinitions:
+        - AttributeName: LockID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: LockID
+          KeyType: HASH
+      TableName: rba-terraform-lock
+      SSESpecification:
+        SSEEnabled: True
