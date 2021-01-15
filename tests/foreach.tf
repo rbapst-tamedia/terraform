@@ -3,10 +3,12 @@ locals {
     {
       name = "first element"
       value = "1"
+      todo = true
     },
     {
       name = "second element"
       aws  = "2"
+      todo = false
     }
   ]
   list2 = [
@@ -21,7 +23,7 @@ locals {
   ]
 }
 
-variable "configs" {
+variable "configs1" {
   description = "Ma configuration"
   default = [
     {
@@ -53,21 +55,11 @@ variable "configs2" {
   }
 }
 
-resource "aws_s3_bucket" "bucket_for" {
-  for_each = {
-    for element in local.list1 : element.name [
-      for domain in local.list2 : concat(element.name, domain.id) => {
-	name = element.name
-	aws = element.aws
-	id = domain.id
-	domain = domain.domain
-      }
-    ]
-  }
-  bucket = each.value.name
-  acl    = "private"
-  tags = {
-    owner = each.value.domain
+output "values" {
+  value = {
+    for element in local.list1 :
+    element.name => element
+    if element.todo
   }
 }
 
