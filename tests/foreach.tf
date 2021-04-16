@@ -1,66 +1,17 @@
 locals {
-  list1 = [
-    {
-      name = "first element"
-      value = "1"
-      todo = true
-    },
-    {
-      name = "second element"
-      aws  = "2"
-      todo = false
-    }
-  ]
-  list2 = [
-    {
-      id = "first id"
-      domain = "first.ch"
-    },
-    {
-      id = "second id"
-      domain = "second.ch"
-    }
+  allowed_ips = [
+    for ip in split("\n", data.local_file.waf_allowed_ips.content) :
+    format("%s/32", regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", ip))
+    if ip != ""
   ]
 }
 
-variable "configs1" {
-  description = "Ma configuration"
-  default = [
-    {
-      name = "roland 1"
-      aws  = "1"
-    },
-    {
-      name = "roland"
-      aws  = "asdasafdsf"
-    }
-  ]
-}
-
-variable "configs2" {
-  description = "Ma configuration"
-  default = {
-    config_1 = {
-      name = "roland 1"
-      aws  = "aws1"
-    }
-    confidfgfdagagg_2 = {
-      name = "roland"
-      aws  = "asdasafdsf"
-    }
-    toto = {
-      name = "roland3"
-      aws  = "3"
-    }
-  }
+data "local_file" "waf_allowed_ips" {
+  filename = "${path.module}/waf_allowed_ips.txt"
 }
 
 output "values" {
-  value = {
-    for element in local.list1 :
-    element.name => element
-    if element.todo
-  }
+  value = local.allowed_ips
 }
 
-  
+
