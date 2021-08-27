@@ -11,7 +11,7 @@ terraform {
 provider "aws" {
   default_tags {
     tags = {
-      owner = "roland"
+      owner  = "roland"
       create = "terraform"
     }
   }
@@ -22,7 +22,7 @@ provider "aws" {
   alias  = "us"
   default_tags {
     tags = {
-      owner = "roland"
+      owner  = "roland"
       create = "terraform"
     }
   }

@@ -17,7 +17,7 @@ variable "cloudfront_enable_distribution" {
 }
 
 variable "cloudfront_default_cache_behaviour" {
-  description = "The default cache behavior for this distribution (maximum one)."
+  Description = "The default cache behavior for this distribution (maximum one)."
   type = object({
     path_pattern              = string
     allowed_methods           = list(string)
@@ -143,8 +143,8 @@ variable "cloudfront_web_acl_id" {
 }
 
 locals {
-  custom_header = [ {"name": "myheader", "value": "0x5ece7" } ]
-  domain_name = "dummy.r0l1.ch"
+  custom_header                  = [{ "name" : "myheader", "value" : "0x5ece7" }]
+  domain_name                    = "dummy.r0l1.ch"
   s3_bucket_regional_domain_name = "dummy.r0l1.ch.s3.eu-central-1.amazonaws.com"
 }
 
