@@ -1,11 +1,11 @@
 ## Variables
-variable "aliases" {
+variable "cf_aliases" {
   description = "Extra CNAMEs (alternate domain names), if any, for this distribution"
   type        = list(string)
 }
-variable "domain_name" {
-  description = "The domain name corresponding to the distribution"
-  type        = string
+variable "cert_domain_names" {
+  description = "The domains for which a SSL/TLS certificate has to be created"
+  type        = list(string)
 }
 variable "cloudfront_web_acl_id" {
   description = "Id of the web_acl to attach"
@@ -28,7 +28,7 @@ variable "cloudfront_origin_groups" {
 }
 ## Locals (to event. put in vars)
 locals {
-  comment                                                     = "CF for files.newsnetz.ch"
+  comment                                                     = "To TestCF for files.newsnetz.ch"
   enabled                                                     = true
   http_version                                                = "http2"
   retain_on_delete                                            = false
@@ -49,39 +49,24 @@ locals {
   cloudfront_default_cache_behavior_default_ttl               = 0
   cloudfront_default_cache_behavior_max_ttl                   = 31536000 # 1 year
   cloudfront_default_cache_behavior_query_string              = true
-  cloudfront_default_cache_behavior_cookies_forward           = "all"
-  cloudfront_default_cache_behavior_cookies_whitelisted_names = []
-  cloudfront_default_cache_behavior_headers = [
-    "Access-Control-Request-Headers",
-    "Access-Control-Request-Method",
-    "Authorization",
-    "Host",
-    "Origin",
-  ]
-  viewer_cert_minimum_protocol_version = "TLSv1.1_2016"
-  cdn_secret_header = data.terraform_remote_state.infrastructure.outputs.traefik_cdn_secret.name
-  cdn_secret_value = data.terraform_remote_state.infrastructure.outputs.traefik_cdn_secret.value
+  cloudfront_default_cache_behavior_cookies_forward           = "whitelist"
+  cloudfront_default_cache_behavior_cookies_whitelisted_names = ["dummy-cookie"]
+  cloudfront_default_cache_behavior_headers                   = []
+  viewer_cert_minimum_protocol_version                        = "TLSv1.1_2016"
 }
 
 ## Resources
-## FIX ME : https://github.com/terraform-providers/terraform-provider-aws/issues/8531
-## FIXED IN AWS Provider 3.0
-resource "null_resource" "sanlist" {
-  triggers = {
-    sanlist = join("", concat([var.domain_name], var.aliases))
-  }
-}
 resource "aws_acm_certificate" "cert" {
   provider                  = aws.us
-  domain_name               = var.domain_name
-  subject_alternative_names = concat([var.domain_name], var.aliases)
+  domain_name               = var.cert_domain_names[0]
+  subject_alternative_names = var.cert_domain_names
   validation_method         = "DNS"
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [subject_alternative_names]
   }
   tags = {
-    Name = var.domain_name
+    Name = var.cert_domain_names[0]
   }
 }
 resource "aws_acm_certificate_validation" "cert" {
@@ -92,7 +77,7 @@ resource "aws_acm_certificate_validation" "cert" {
   }
 }
 resource "aws_cloudfront_distribution" "cloudfront_distribution" {
-  aliases             = concat([var.domain_name], var.aliases)
+  aliases             = var.cf_aliases
   comment             = local.comment
   default_root_object = ""
   enabled             = local.enabled
@@ -103,20 +88,11 @@ resource "aws_cloudfront_distribution" "cloudfront_distribution" {
   wait_for_deployment = local.wait_for_deployment
   web_acl_id          = var.cloudfront_web_acl_id
   origin {
-    domain_name = var.domain_name
+    domain_name = aws_s3_bucket.website.bucket_regional_domain_name
     origin_id   = "default"
     origin_path = local.cloudfront_default_custom_origin_path
-    custom_origin_config {
-      http_port                = local.cloudfront_default_custom_origin_http_port
-      https_port               = local.cloudfront_default_custom_origin_https_port
-      origin_keepalive_timeout = local.cloudfront_default_custom_origin_keepalive_timeout
-      origin_read_timeout      = local.cloudfront_default_custom_origin_read_timeout
-      origin_protocol_policy   = local.cloudfront_default_custom_origin_protocol_policy
-      origin_ssl_protocols     = local.cloudfront_default_custom_origin_ssl_protocols
-    }
-    custom_header {
-      name = local.cdn_secret_header
-      value = local.cdn_secret_value
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
     }
   }
 
@@ -126,28 +102,60 @@ resource "aws_cloudfront_distribution" "cloudfront_distribution" {
     target_origin_id       = local.cloudfront_default_cache_behavior_target_origin_id
     compress               = local.cloudfront_default_cache_behavior_compress
     viewer_protocol_policy = local.cloudfront_default_cache_behavior_viewer_protocol_policy
-    min_ttl                = local.cloudfront_default_cache_behavior_min_ttl
-    default_ttl            = local.cloudfront_default_cache_behavior_default_ttl
-    max_ttl                = local.cloudfront_default_cache_behavior_max_ttl
-    forwarded_values {
-      query_string = local.cloudfront_default_cache_behavior_query_string
-      cookies {
-        forward           = local.cloudfront_default_cache_behavior_cookies_forward
-        whitelisted_names = local.cloudfront_default_cache_behavior_cookies_whitelisted_names
-      }
-      headers = local.cloudfront_default_cache_behavior_headers
-    }
-
+    # min_ttl                = local.cloudfront_default_cache_behavior_min_ttl
+    # default_ttl            = local.cloudfront_default_cache_behavior_default_ttl
+    # max_ttl                = local.cloudfront_default_cache_behavior_max_ttl
+    cache_policy_id = aws_cloudfront_cache_policy.default.id
   }
+
   viewer_certificate {
     acm_certificate_arn      = aws_acm_certificate_validation.cert.certificate_arn
     minimum_protocol_version = local.viewer_cert_minimum_protocol_version
     ssl_support_method       = "sni-only"
   }
 
+  dynamic "logging_config" {
+    for_each = aws_s3_bucket.logs
+    content {
+      bucket          = logging_config.value.bucket_domain_name
+      include_cookies = false
+    }
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_access_identity" "oai" {
+  comment = "Some comment"
+}
+
+resource "aws_cloudfront_cache_policy" "default" {
+  name        = "default"
+  default_ttl = 300
+  max_ttl     = 300
+  min_ttl     = 1
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = local.cloudfront_default_cache_behavior_cookies_forward
+      cookies {
+        items = local.cloudfront_default_cache_behavior_cookies_whitelisted_names
+      }
+    }
+    headers_config {
+      header_behavior = "none"
+      # headers {
+      #   items = local.cloudfront_default_cache_behavior_headers
+      # }
+    }
+    query_strings_config {
+      query_string_behavior = "whitelist"
+      query_strings {
+        items = ["page"]
+      }
     }
   }
 }
