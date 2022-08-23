@@ -9,6 +9,11 @@ terraform {
       version = "~ 3.68.0"
     }
   }
+#  backend "s3" {
+#    bucket = "rba-state-bucket"
+#    key = "terraform/tutorial/terraform.tfstate"
+#    dynamodb_table = "terraform-lock"
+#  }
 }
 
 #
@@ -20,7 +25,6 @@ provider "aws" {
   region = "eu-central-1"
   default_tags {
     tags = {
-      Landscape   = var.environment
       Github-Repo = var.github_repo
     }
   }
@@ -29,6 +33,16 @@ provider "aws" {
 #
 # Variables
 #
+variable "github_repo" {
+  description = "Used to tag resource, name of this repo"
+  type        = string
+  default     = "https://github.com/rbapst-tamedia/terraform/tree/master/tutorial"
+}
+
+variable "environment" {
+  description = "The environment this resource will be deployed in."
+  type        = string
+}
 
 #
 # Locals (pratique pour faire des "calculs")
@@ -84,3 +98,6 @@ data "local_file" "waf_allowed_ips" {
   filename = "${path.module}/waf_allowed_ips.txt"
 }
 
+output "random" {
+  value = random_pet.this
+}
