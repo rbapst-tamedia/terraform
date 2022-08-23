@@ -12,23 +12,23 @@ locals {
 
   array_of_records = [
     {
-      username = "Roland_Bapst",
-      email    = "roland.bapst@tx.group",
+      username = "one_name",
+      email    = "one.name@example.com",
     },
     {
-      username = "Fabien_Francillon",
-      email    = "fabien.francillon@tx.group",
+      username = "another_name",
+      email    = "another.name@example.com",
     }
   ]
 
-  map = {
-    roland = {
-      phone = 5114
+  phone = {
+    police = {
+      phone = 117
     },
-    marvin = {
-      phone = 6000
+    fire = {
+      phone = 118
     }
   }
 
-  roland = local.map["roland"].phone
+  me = local.phone["police"].phone
 }
