@@ -8,17 +8,13 @@ locals {
     un-deux: "un-deux",
     un_deux: "un_dexu"
   }
-  a = for_each = [ local.addons
-  { n=each.key,
-    v=each.value
-  }
+  replace_char = "Un-deux/1.x"
 }
 
 data "local_file" "waf_allowed_ips" {
   filename = "${path.module}/waf_allowed_ips.txt"
 }
 
-output "test" {
-  value = local.a
+output "only_letters" {
+  value = replace(replace(local.replace_char, "/", ""), ".", "")
 }
-
