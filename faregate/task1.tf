@@ -7,14 +7,17 @@ data "aws_iam_policy_document" "assume_ecs_tasks_role" {
     }
   }
 }
+
 resource "aws_iam_role" "task" {
   name               = "rba_ecs_task_role"
   assume_role_policy = data.aws_iam_policy_document.assume_ecs_tasks_role.json
 }
+
 resource "aws_iam_role_policy_attachment" "task" {
   role       = aws_iam_role.task.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
 resource "aws_ecs_task_definition" "this" {
   family                   = local.ecs_task_definition_name
   container_definitions    = file("task_definition.json")
@@ -25,6 +28,7 @@ resource "aws_ecs_task_definition" "this" {
   cpu                = local.cpu
   memory             = local.memory
 }
+
 resource "aws_ecs_service" "this" {
   count           = 1
   name            = local.ecs_service_name
