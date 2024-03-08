@@ -3,79 +3,54 @@ locals {
   sub_domain = "20240307-10"
 }
 
-module "public" {
-  source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=fum-versioning"
+# module "v0_2_0" {
+#   source = "../../../../tx-pts-dai/terraform-aws-static-website"
+#   providers = {
+#     aws.us = aws.us
+#   }
+
+#   url                 = "${local.sub_domain}-v0-2-0.${local.dns_domain}"
+#   route53_domain      = local.dns_domain
+#   static_content_path = "./static_files"
+
+# }
+
+# module "fum_versioning_null" {
+#   source = "../../../../tx-pts-dai/terraform-aws-static-website"
+#   providers = {
+#     aws.us = aws.us
+#   }
+
+#   url                 = "${local.sub_domain}-null.${local.dns_domain}"
+#   route53_domain      = local.dns_domain
+#   static_content_path = "./static_files"
+
+# }
+
+module "fum_versioning_true" {
+  source = "../../../../tx-pts-dai/terraform-aws-static-website"
   providers = {
     aws.us = aws.us
   }
 
-  versioning          = "Enabled"
-  url                 = "${local.sub_domain}.${local.dns_domain}"
-  route53_domain      = local.dns_domain
-  static_content_path = "./static_files"
+  enable_bucket_versioning = true
+  url                      = "${local.sub_domain}-true.${local.dns_domain}"
+  route53_domain           = local.dns_domain
+  static_content_path      = "./static_files"
+
 }
 
-# module "v0_2_0" {
-#   source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=v0.2.0"
-#   providers = {
-#     aws.us = aws.us
-#   }
+module "fum_versioning_false" {
+  source = "../../../../tx-pts-dai/terraform-aws-static-website"
+  providers = {
+    aws.us = aws.us
+  }
+  enable_bucket_versioning = false
+  url                      = "${local.sub_domain}-false.${local.dns_domain}"
+  route53_domain           = local.dns_domain
+  static_content_path      = "./static_files"
 
-#   url                 = "v0-${local.sub_domain}.${local.dns_domain}"
-#   route53_domain      = local.dns_domain
-#   static_content_path = "./static_files"
-
-# }
-
-# module "fum_versioning_off" {
-#   source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=fum-versioning"
-#   providers = {
-#     aws.us = aws.us
-#   }
-
-#   url                 = "no-ver-${local.sub_domain}.${local.dns_domain}"
-#   route53_domain      = local.dns_domain
-#   static_content_path = "./static_files"
-
-# }
-
-# module "fum_versioning_enabled" {
-#   source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=fum-versioning"
-#   providers = {
-#     aws.us = aws.us
-#   }
-#   versioning          = "Enabled"
-#   url                 = "enabled-${local.sub_domain}.${local.dns_domain}"
-#   route53_domain      = local.dns_domain
-#   static_content_path = "./static_files"
-
-# }
-
-# module "fum_versioning_disabled" {
-#   source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=fum-versioning"
-#   providers = {
-#     aws.us = aws.us
-#   }
-
-#   versioning          = "Disabled"
-#   url                 = "disabled-${local.sub_domain}.${local.dns_domain}"
-#   route53_domain      = local.dns_domain
-#   static_content_path = "./static_files"
-
-# }
-
-# module "fum_versioning_suspended" {
-#   source = "github.com/tx-pts-dai/terraform-aws-static-website.git?ref=fum-versioning"
-#   providers = {
-#     aws.us = aws.us
-#   }
-
-#   versioning          = "Suspended"
-#   url                 = "suspended-${local.sub_domain}.${local.dns_domain}"
-#   route53_domain      = local.dns_domain
-#   static_content_path = "./static_files"
-
-# }
+}
 
 # resource "aws_s3_object" "test" {
 #   for_each = toset([
