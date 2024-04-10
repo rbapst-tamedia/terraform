@@ -1,15 +1,19 @@
 locals {
-  domain_name  = contains(keys(var.domain_infos), var.deployment_env) ? var.domain_infos.var.deployment_env.domain_name : ""
-  release_name = "toto"
-  service_name = local.release_name
+  deploy_random = var.test_bool == null ? false : true
 }
 
-resource "null_resource" "test" {
-  count = lookup(var.domain_infos, var.deployment_env, null) != null ? 1 : 0
+variable "test_bool" {
+  description = "test with var = null/true/false"
+  type        = bool
+  default     = null
 }
-output "service_name" {
-  value = local.service_name
+
+resource "random_pet" "this" {
+  count  = local.deploy_random ? 1 : 0
+  length = 10
+  prefix = var.test_bool ? "t-" : "f-"
 }
-output "domain_name" {
-  value = local.domain_name
+
+output "test_bool" {
+  value = local.deploy_random ? random_pet.this[0].id : "-"
 }
