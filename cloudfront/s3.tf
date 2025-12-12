@@ -15,18 +15,26 @@ locals {
 # Resources
 resource "aws_s3_bucket" "website" {
   bucket = var.website_bucket_name
-  acl    = "private"
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
+# resource "aws_s3_bucket_acl" "website" {
+#   bucket = aws_s3_bucket.website.id
+#   acl    = "private"
+# }
+
+resource "aws_s3_bucket_versioning" "website" {
+  bucket = aws_s3_bucket.website.id
+  versioning_configuration {
+    status = "Disabled"
   }
-  # Versioning disabled on S3 content is generated from githubd
-  versioning {
-    enabled = false
+}
+resource "aws_s3_bucket_server_side_encryption_configuration" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
 
@@ -48,29 +56,32 @@ resource "aws_s3_bucket_policy" "website" {
 }
 
 # S3 bucket for logs (if enabled)
-resource "aws_s3_bucket" "logs" {
-  count = local.deploy_logging ? 1 : 0
+module "logs" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.2.0"
+
+  create_bucket = local.deploy_logging ? true : false
 
   bucket = "cflogs-${var.website_bucket_name}"
 
-  grant {
+  grant = {
     id          = "c4c1ede66af53448b93c283ce9448c4ba468c9432aa01d700d3878632f77d2d0"
     permissions = ["FULL_CONTROL"]
     type        = "CanonicalUser"
   }
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
         sse_algorithm = "AES256"
       }
     }
   }
-  versioning {
+  versioning = {
     enabled = false
   }
-  lifecycle_rule {
+  lifecycle_rule = {
     enabled = true
-    expiration {
+    expiration = {
       days = 90
     }
   }
@@ -79,7 +90,7 @@ resource "aws_s3_bucket" "logs" {
 resource "aws_s3_bucket_policy" "logs" {
   count = local.deploy_logging ? 1 : 0
 
-  bucket = aws_s3_bucket.logs[0].id
+  bucket = module.logs.s3_bucket_id
   policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
@@ -91,8 +102,8 @@ resource "aws_s3_bucket_policy" "logs" {
         },
         "Action" : ["s3:*"],
         "Resource" : [
-          "${aws_s3_bucket.logs[0].arn}",
-          "${aws_s3_bucket.logs[0].arn}/*"
+          "${module.logs.s3_bucket_arn}",
+          "${module.logs.s3_bucket_arn}/*"
         ]
       }
     ]

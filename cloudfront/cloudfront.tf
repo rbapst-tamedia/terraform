@@ -28,7 +28,7 @@ variable "cloudfront_origin_groups" {
 }
 ## Locals (to event. put in vars)
 locals {
-  comment                                                     = "To TestCF for files.newsnetz.ch"
+  comment                                                     = "Test CF distribution with only *"
   enabled                                                     = true
   http_version                                                = "http2"
   retain_on_delete                                            = false
@@ -66,7 +66,7 @@ resource "aws_acm_certificate" "cert" {
     ignore_changes        = [subject_alternative_names]
   }
   tags = {
-    Name = var.cert_domain_names[0]
+    Name = replace(var.cert_domain_names[0], "*", "")
   }
 }
 resource "aws_acm_certificate_validation" "cert" {
@@ -112,14 +112,6 @@ resource "aws_cloudfront_distribution" "cloudfront_distribution" {
     acm_certificate_arn      = aws_acm_certificate_validation.cert.certificate_arn
     minimum_protocol_version = local.viewer_cert_minimum_protocol_version
     ssl_support_method       = "sni-only"
-  }
-
-  dynamic "logging_config" {
-    for_each = aws_s3_bucket.logs
-    content {
-      bucket          = logging_config.value.bucket_domain_name
-      include_cookies = false
-    }
   }
 
   restrictions {

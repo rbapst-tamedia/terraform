@@ -1,7 +1,11 @@
 terraform {
-  required_version = "~> 1.11.0"
+  required_version = "~> 1.13.0"
 
   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
@@ -13,7 +17,11 @@ provider "cloudflare" {
   # export CLOUDFLARE_API_TOKEN in calling shell or
   # To test, create an API Token in https://dash.cloudflare.com/profile/api-tokens for cblanche.ch domain
   #
-  # api_token = data.aws_secretsmanager_secret_version.cloudflare_api_token.secret_string --> check disco-infra-terraform/main.tf
+  api_token = jsondecode(data.aws_secretsmanager_secret_version.cloudflare_api_token.secret_string)["apiToken"] # --> check disco-infra-terraform/main.tf
+}
+
+data "aws_secretsmanager_secret_version" "cloudflare_api_token" {
+  secret_id = "dai/cloudflare/tamedia/apiToken"
 }
 
 variable "cloudflare_static_records" {
@@ -48,10 +56,5 @@ resource "cloudflare_dns_record" "this" {
   ttl     = each.value.ttl
   comment = each.value.comment != "" ? each.value.comment : null
   proxied = false
-
   # allow_overwrite = true
-}
-
-output "zone" {
-  value = data.cloudflare_zone.this["rba-test-1.cblanche.ch.-CNAME-rba-test-1-0"]
 }

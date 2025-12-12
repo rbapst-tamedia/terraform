@@ -4,18 +4,18 @@ variable "aws_region" {
 }
 
 terraform {
-  required_version = "1.0.11"
+  required_version = "~> 1.9.0"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 5.0"
     }
   }
 
   backend "s3" {
-    bucket = "tfstate-sandbox"
-    key    = "rba-test/cloudfront/terraform.tfstate"
+    bucket = "tf-state-911453050078"
+    key    = "rbapst-tamedia/terraform/cloudfront/terraform.tfstate"
   }
 }
 
